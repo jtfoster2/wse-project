@@ -1,28 +1,36 @@
-from venv import create
 
 from flask import Flask, request, jsonify, render_template, redirect, url_for
 import sqlite3
 
 app = Flask(__name__)
 
-# This function utilizes a database.db file if it exists in the root directory, otherwise it should create one with a fields table.
-# I wrote this python script before I settled on what the database would "store" for this assignment,
-# I didn't want to refactor the entire code, so the table name is staying as generic "field".
-def create_db():
-    query_qb('''
-        CREATE TABLE IF NOT EXISTS fields (
+# This function utilizes a database.db file if it exists in the root directory, otherwise it should create one with two tables, metadata, and users.
+def _create_db():
+    _query_qb('''
+        CREATE TABLE IF NOT EXISTS metadata (
             id INTEGER PRIMARY KEY,
-            name TEXT,
-            occupation TEXT,
-            hire_date TEXT,
-            salary NUMERIC,
-            employed BOOLEAN
+            title TEXT, -- name of the extension itself
+            creator TEXT, -- name of the creator
+            extends TEXT, -- org.gimp.GIMP
+            summary TEXT, -- Short description of the extension and what it does
+            meta-license TEXT, -- License of the metadata 
+            project-license TEXT, -- License of the project
+            description TEXT, -- Full description of the extension
+            -- SQLLite doesn't have Array support that I saw, so having to get a little creative using JSON array strings here
+            tags TEXT, -- JSON String holds the array of tags
+            screenshots TEXT, -- JSON String holds the array of screenshot links
+            releases TEXT -- JSON String holds the array of release information
+        )
+    ''')
+    _query_qb('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY,
+            -- TODO: Figure out what fields we need for users
         )
     ''')
 
 # This function handles the SQL queries to the database, so we're not repeating database code across the operations.
-# I know in class we were taught MySQL, but I thought sqlite3 was simpler, and a better match for a small flask project. Plus I haven't used it before.
-def query_qb(query, params=(), fetch=False):
+def _query_qb(query, params=(), fetch=False):
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     cursor.execute(query, params)
@@ -39,43 +47,103 @@ def query_qb(query, params=(), fetch=False):
 def index():
     return render_template('client.html')
 
-# POST Operation; the C in CRUD. When the user hits "add" on the client.html page, this function grabs all the data and submits it to the table.
-@app.route('/add', methods=['POST'])
-def add_field():
-    name = request.form['name']
-    occupation = request.form['occupation']
-    hire_date = request.form['hire_date']
-    salary = request.form['salary']
-    employed = request.form['employed'] == 'true'
+# These endpoints were determined in a class vote via this Google Doc: https://docs.google.com/document/d/1Hy8mu29JaC8YT_zD_RM68AxtDEgFvCD3gcOVnuhJORw/edit?usp=sharing
 
-    query_qb('INSERT INTO fields (name, occupation, hire_date, salary, employed) VALUES (?, ?, ?, ?, ?)',
-             (name, occupation, hire_date, salary, employed))
+@app.route('/repository/metadata', methods=['GET'])
+# Class Description: Gets repository metadata. Returns the current repository listing containing all extension metadata
+def get_repository_metadata():
+    metadata = _query_qb('SELECT * FROM metadata')
+    # Format metadata here if needed
+    return metadata
+
+@app.route('/repository/extension/<int:id>/<str:version>', methods=['GET'])
+# Class Description: Download specified extension version package.
+def get_extension_download(id, version):
+    version_info = _query_qb(f'SELECT version FROM metadata WHERE id = {id}')
+    # TODO: Unpack version info to get download link
+    return None
+
+@app.route('/extension', methods=['PUT'])
+# Class Description: Uploads a new extension.
+def post_extension():
+    title = request.form['title']
+    creator = request.form['creator']
+    extends = request.form['extends']
+    summary = request.form['summary']
+    meta_license = request.form['meta_license']
+    project_license = request.form['project_license']
+    description = request.form['description']
+    tags = request.form['tags']
+    screenshots = request.form['screenshots']
+    releases = request.form['releases']
+
+    _query_qb('INSERT INTO metadata (title, creator, extends, summary, meta_license, project_license, description, tags, screenshots, releases) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+              (title, creator, extends, summary, meta_license, project_license, description, tags, screenshots, releases))
 
     # Doing a redirect here so the page is automatically refreshed with the new entry showing in the database view.
     return redirect(url_for('index'))
 
-# GET Operation; the R in CRUD. This function is called by the fetch method. On load, it grabs all the data from the 'fields' table and returns it as JSON to display.
-@app.route('/fields', methods=['GET'])
-def get_fields():
-    fields = query_qb('SELECT id, name, occupation, hire_date, salary, employed FROM fields', fetch=True)
-    fields = [{'id': row[0], 'name': row[1], 'occupation': row[2], 'hire_date': row[3], 'salary': row[4], 'employed': row[5]} for row in fields]
-    return jsonify({'fields': fields})
+@app.route('/extension/<int:id>', methods=['GET'])
+# Class Description: Returns a single extension's metadata.
+def get_extension(id, version):
+    extension_info = _query_qb(f'SELECT * FROM metadata WHERE id = {id}')
+    # Format extension info here if needed
+    return extension_info
 
-# PUT Operation; the U in CRUD. Called by the editField, and submitEdit functions. Runs a simple UPDATE query to change the data in the fields table.
-# I think I could have combined this function and add_field by using "INSERT OR UPDATE" SQL command, but figured I should keep them separate in this assignment for both simplicity and clarity.
-@app.route('/edit/<int:id>', methods=['PUT'])
-def edit_field(id):
+@app.route('/extension/<int:id>', methods=['PUT'])
+# Class Description: Updates a single extension with a new version
+def put_extension(id, version):
     data = request.json
-    query_qb('UPDATE fields SET name = ?, occupation = ?, hire_date = ?, salary = ?, employed = ? WHERE id = ?',
-             (data['name'], data['occupation'], data['hire_date'], data['salary'], data['employed'], id))
+    _query_qb('UPDATE metadata SET title = ?, creator = ?, extends = ?, summary = ?, meta_license = ?, project_license = ?, description = ?, tags = ?, screenshots = ?, releases = ? WHERE id = ?',
+              (data['title'], data['creator'], data['extends'], data['summary'], data['meta_license'], data['project_license'], data['description'], data['tags'], data['screenshots'], data['releases'], id))
     return jsonify({'success': True})
 
-# DELETE Operation; the D in CRUD. Only used by the deleteField function, similar to edit_field, its a simple DELETE query to the fields table.
-@app.route('/delete/<int:id>', methods=['DELETE'])
-def delete_field(id):
-    query_qb('DELETE FROM fields WHERE id = ?', (id,))
+@app.route('/extension/<int:id>', methods=['DELETE'])
+# Class Description: Deletes an extension version.
+def delete_extension(id):
+    _query_qb('DELETE FROM metadata WHERE id = ?', (id,))
     return jsonify({'success': True})
 
+@app.route('/extension/<int:id>/flag', methods=['POST'])
+# Class Description: Flag an extension for review.
+def post_extension_flag(id):
+    # TODO: Figure out how flagging will be tracked... Boolean field, or a part of tags?
+    return None
+
+@app.route('/auth/register', methods=['POST'])
+# Class Description: Create registration for a new user.
+def post_user_registration():
+    # TODO: HOW ARE WE DOING AUTHENTICATION?
+    return None
+
+@app.route('/auth/login', methods=['POST'])
+# Class Description: Authenticate an existing user who's logging in.
+def post_user_authentication():
+    # TODO: HOW ARE WE DOING AUTHENTICATION?
+    return None
+
+# This Function sounds like a duplicate of get_extension, but Class API Doc calls for it currently.
+@app.route('/plugin/<int:id>', methods=['GET'])
+# Class Description: Get a plugin and details about it.
+def get_plugin(id):
+    extension_info = _query_qb(f'SELECT * FROM metadata WHERE id = {id}')
+    # Format extension info here if needed
+    return extension_info
+
+# IMO terrible name from the class API Doc, should probably come up with a better name
+@app.route('/extension/sanitizeExtension', methods=['PUT'])
+# Class Description: Process ran as a part of extension uploading to check against metadata guidelines.
+def put_sanitize_extension(id):
+    # TODO: Figure out what needs to be done here.
+    return None
+
+@app.route('/extension/searchExtensions/<str:query>/<str:tags>', methods=['DELETE'])
+# Class Description: Searches for a subset of extensions.
+def get_extension_search(query, tags):
+    # TODO: Figure out how to search the database for a generalized query and/or tags.
+    return None
+
+# This function can be used in an IDE to run the app locally instead of using run_app.bat
 if __name__ == '__main__':
-    create_db()
+    _create_db()
     app.run(debug=True)
