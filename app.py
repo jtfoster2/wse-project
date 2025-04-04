@@ -53,14 +53,14 @@ def index():
 # Class Description: Gets repository metadata. Returns the current repository listing containing all extension metadata
 def get_repository_metadata():
     metadata = _query_qb('SELECT * FROM metadata')
-    # Format metadata here if needed
+    # We can reformat extension info that's returned here if needed
     return metadata
 
 @app.route('/repository/extension/<int:id>/<str:version>', methods=['GET'])
 # Class Description: Download specified extension version package.
 def get_extension_download(id, version):
     version_info = _query_qb(f'SELECT version FROM metadata WHERE id = {id}')
-    # TODO: Unpack version info to get download link
+    # TODO: Unpack version info to get download link; We'll need to figure out the version formatting first.
     return None
 
 @app.route('/extension', methods=['PUT'])
@@ -87,12 +87,12 @@ def post_extension():
 # Class Description: Returns a single extension's metadata.
 def get_extension(id, version):
     extension_info = _query_qb(f'SELECT * FROM metadata WHERE id = {id}')
-    # Format extension info here if needed
+    # We can reformat extension info that's returned here if needed
     return extension_info
 
 @app.route('/extension/<int:id>', methods=['PUT'])
 # Class Description: Updates a single extension with a new version
-def put_extension(id, version):
+def put_extension(id):
     data = request.json
     _query_qb('UPDATE metadata SET title = ?, creator = ?, extends = ?, summary = ?, meta_license = ?, project_license = ?, description = ?, tags = ?, screenshots = ?, releases = ? WHERE id = ?',
               (data['title'], data['creator'], data['extends'], data['summary'], data['meta_license'], data['project_license'], data['description'], data['tags'], data['screenshots'], data['releases'], id))
@@ -127,7 +127,7 @@ def post_user_authentication():
 # Class Description: Get a plugin and details about it.
 def get_plugin(id):
     extension_info = _query_qb(f'SELECT * FROM metadata WHERE id = {id}')
-    # Format extension info here if needed
+    # We can reformat extension info that's returned here if needed
     return extension_info
 
 # IMO terrible name from the class API Doc, should probably come up with a better name
