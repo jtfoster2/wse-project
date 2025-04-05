@@ -137,7 +137,7 @@ def put_sanitize_extension(id):
     # TODO: Figure out what needs to be done here.
     return None
 
-@app.route('/extension/searchExtensions/<str:query>/<str:tags>', methods=['DELETE'])
+@app.route('/extension/searchExtensions/<str:query>/<str:tags>', methods=['GET'])
 # Class Description: Searches for a subset of extensions.
 def get_extension_search(query, tags):
     # TODO: Figure out how to search the database for a generalized query and/or tags.
