@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+        <title>Display detailed extension search results</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet">
+    </head>
+    <body>
+        <div class="container-fluid p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <a href ="/" class="btn btn-outline-danger">Login</a>
+            </div>
+
+            <!--Search-->
+            <div class ="mb-4">
+                <input type="text" class="form-control" placeholder="Search extensions...">
+            </div>
+        
+
+            <!--Display detailed extension search results-->
+            <div class="card">
+                <div class="card-body">
+                    <textarea class="form-control-mb-3" rows="3" placeholder="Extension search result"></textarea>
+                </div>
+            </div>
+
+            <!--Display extension details-->
+            <div class="card">
+                <div class="card-body">
+                    <textarea class="form-control-mb-3" rows="3" placeholder="Extension Details"></textarea>
+                    <div class="text-end">
+                        <button class="btn btn-primary">Download</button>
+                        <button class="btn btn-primary">Flag</button>
+                    </div>
+                </div>
+            </div>
+
+            <!--Input for flag-->
+            <div class="card">
+                <div class="card-body">
+                    <textarea class="form-control-mb-3" rows="3" placeholder="Flagging description"></textarea>
+                    <div class="text-end">
+                        <button class="btn btn-primary">Submit</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script src ="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css"></script>
+    </body>
+</html>
