@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Extensions Status</title>
+
+     <!-- Bootstrap CSS -->
+     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  </head>
+
+  <body>
+    <div class="container-fluid p-3">
+      <div class="d-flex justify-content-between">
+          <a href="ext_status.html" class="btn btn-outline-secondary" id="uploads">Uploads</a>
+          <button class="btn btn-outline-danger" id="logout">Logout</button>
+      </div>
+      <div class="row mt-3">
+          <div class="col-md-2 bg-light p-3">
+              <button class="btn btn-secondary w-100">Search</button>
+          </div>
+          <div class="col-md-10">
+              <div class="card p-3">
+                  <div class="card-body">
+                      <h5 class="card-title text-center">Extension Created</h5>
+                      <div class="table-responsive">
+                        <table class="table table-stripped table-bordered" id="extensionsTable">
+                          <thead>
+                            <tr>
+                              <th>Extension Name</th>
+                              <th>Flagged</th>
+                              <th>Delete</th>
+                            </tr>
+                          </thead>
+                        </table>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+  </div>
+  </body>
+</html>
