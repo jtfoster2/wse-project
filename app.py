@@ -9,25 +9,26 @@ def _create_db():
     _query_qb('''
         CREATE TABLE IF NOT EXISTS metadata (
             id INTEGER PRIMARY KEY,
-            title TEXT, -- name of the extension itself
-            creator TEXT, -- name of the creator
-            extends TEXT, -- org.gimp.GIMP
-            summary TEXT, -- Short description of the extension and what it does
-            meta-license TEXT, -- License of the metadata 
-            project-license TEXT, -- License of the project
-            description TEXT, -- Full description of the extension
-            -- SQLLite doesn't have Array support that I saw, so having to get a little creative using JSON array strings here
-            tags TEXT, -- JSON String holds the array of tags
-            screenshots TEXT, -- JSON String holds the array of screenshot links
-            releases TEXT -- JSON String holds the array of release information
+            title TEXT, 
+            "meta-license" TEXT, 
+            "project-license" TEXT, 
+            creator TEXT,
+            extends TEXT,
+            summary TEXT,
+            description TEXT,
+            "tags" TEXT,
+            "screenshots" TEXT,
+            "releases" TEXT
         )
     ''')
+
     _query_qb('''
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY
             -- TODO: Figure out what fields we need for users
         )
     ''')
+
 
 # This function handles the SQL queries to the database, so we're not repeating database code across the operations.
 def _query_qb(query, params=(), fetch=False):
@@ -56,7 +57,7 @@ def get_repository_metadata():
     # We can reformat extension info that's returned here if needed
     return metadata
 
-@app.route('/repository/extension/<int:id>/<str:version>', methods=['GET'])
+@app.route('/repository/extension/<int:id>/string:version>', methods=['GET'])
 # Class Description: Download specified extension version package.
 def get_extension_download(id, version):
     version_info = _query_qb(f'SELECT version FROM metadata WHERE id = {id}')
@@ -137,7 +138,7 @@ def put_sanitize_extension(id):
     # TODO: Figure out what needs to be done here.
     return None
 
-@app.route('/extension/searchExtensions/<str:query>/<str:tags>', methods=['GET'])
+@app.route('/extension/searchExtensions/string:query>/string:tags>', methods=['GET'])
 # Class Description: Searches for a subset of extensions.
 def get_extension_search(query, tags):
     # TODO: Figure out how to search the database for a generalized query and/or tags.
