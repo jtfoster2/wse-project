@@ -43,13 +43,12 @@ def _query_qb(query, params=(), fetch=False):
     conn.close()
     return result
 
-# Loads the client.html file when the user accesses the hosting URL.
+# Loads the main html file when the user accesses the hosting URL.
 @app.route('/')
 def index():
-    return render_template('client.html')
+    return render_template('index.html')
 
-# These endpoints were determined in a class vote via this Google Doc: https://docs.google.com/document/d/1Hy8mu29JaC8YT_zD_RM68AxtDEgFvCD3gcOVnuhJORw/edit?usp=sharing
-
+# These API endpoints were determined in a class vote via this Google Doc: https://docs.google.com/document/d/1Hy8mu29JaC8YT_zD_RM68AxtDEgFvCD3gcOVnuhJORw/edit?usp=sharing
 @app.route('/repository/metadata', methods=['GET'])
 # Class Description: Gets repository metadata. Returns the current repository listing containing all extension metadata
 def get_repository_metadata():

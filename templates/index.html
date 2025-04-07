@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Extensions Update</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    
+    <style>
+      .container {
+        margin-top: 50px;
+        text-align: center;
+      }
+
+      .btn-custom {
+        width: 200px;
+        margin: 10px;
+      }
+    </style>
+  </head>
+  <body>
+
+    <div class="container">
+      <h1 class="mb-4">Group 2 Extensions Project</h1>
+
+      <div class="row justify-content-center">
+        <div class="row justify-content-center">
+            <div class="col-4">
+                <!-- Button to route to User View -->
+                <a href="{{ url_for('static', filename='user.html') }}" class="btn btn-primary btn-custom">User View</a>
+            </div>
+            <div class="col-4">
+                <!-- Button to route to Reviewer View -->
+                <a href="{{ url_for('static', filename='reviewer.html') }}" class="btn btn-primary btn-custom">Reviewer View</a>
+            </div>
+            <div class="col-4">
+                <!-- Button to route to Auth View -->
+                <a href="{{ url_for('static', filename='auth.html') }}" class="btn btn-primary btn-custom">Auth View</a>
+            </div>
+            <div class="col-4">
+                <!-- Button to route to Extension Status View -->
+                <a href="{{ url_for('static', filename='ext_status.html') }}" class="btn btn-primary btn-custom">Extension Status View</a>
+            </div>
+            <div class="col-4">
+                <!-- Button to route to Extension Update View -->
+                <a href="{{ url_for('static', filename='ext_update.html') }}" class="btn btn-primary btn-custom">Extension Update View</a>
+            </div>
+            <div class="col-4">
+                <!-- Button to route to Extension Upload View -->
+                <a href="{{ url_for('static', filename='ext_upload.html') }}" class="btn btn-primary btn-custom">Extension Upload View</a>
+            </div>
+        </div>
+        
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  </body>
+</html>
