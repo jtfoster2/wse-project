@@ -1,136 +1,260 @@
+# Standard Library
+import sys
+import logging
+from datetime import timedelta
 
-from flask import Flask, request, jsonify, render_template, redirect, url_for
-import sqlite3
+# Flask & Extensions
+from flask import Flask, request, jsonify, render_template
+from flask_cors import CORS
+from flask_jwt_extended import create_access_token, JWTManager, jwt_required, get_jwt_identity
+from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__)
+# Third-Party
+from rapidfuzz import process, fuzz
 
-# This function utilizes a database.db file if it exists in the root directory, otherwise it should create one with two tables, metadata, and users.
-def _create_db():
-    _query_qb('''
-        CREATE TABLE IF NOT EXISTS metadata (
-            id INTEGER PRIMARY KEY,
-            title TEXT, 
-            "meta-license" TEXT, 
-            "project-license" TEXT, 
-            creator TEXT,
-            extends TEXT,
-            summary TEXT,
-            description TEXT,
-            "tags" TEXT,
-            "screenshots" TEXT,
-            "releases" TEXT
-        )
-    ''')
+# Local Modules
+from database import setup_db, db
+from database import Users, Extension, Version
 
-    _query_qb('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY
-            -- TODO: Figure out what fields we need for users
-        )
-    ''')
+def create_app():
+    
+    app = Flask(__name__, template_folder='./templates')
+    logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
+    app.logger.setLevel(logging.DEBUG)
+    app.config['JWT_SECRET_KEY'] = 'a_very_secret_key'
+
+    CORS(app) 
+    setup_db(app)
+    JWTManager(app)
+
+    return app
+
+app = create_app()
 
 
-# This function handles the SQL queries to the database, so we're not repeating database code across the operations.
-def _query_qb(query, params=(), fetch=False):
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute(query, params)
-    if fetch:
-        result = cursor.fetchall()
-    else:
-        result = None
-    conn.commit()
-    conn.close()
-    return result
-
-# Loads the client.html file when the user accesses the hosting URL.
-@app.route('/')
+@app.route('/', methods=['GET'])
 def index():
-    return render_template('client.html')
+    return render_template('index.html')
 
-# These endpoints were determined in a class vote via this Google Doc: https://docs.google.com/document/d/1Hy8mu29JaC8YT_zD_RM68AxtDEgFvCD3gcOVnuhJORw/edit?usp=sharing
-
+# Get metadata for all extensions
 @app.route('/repository/metadata', methods=['GET'])
-# Class Description: Gets repository metadata. Returns the current repository listing containing all extension metadata
 def get_repository_metadata():
-    metadata = _query_qb('SELECT * FROM metadata')
-    # We can reformat extension info that's returned here if needed
-    return metadata
+    extensions = Extension.query.all()
+    extensions_dict = [extension.to_dict() for extension in extensions]
+    return jsonify(extensions_dict), 200
 
-@app.route('/repository/extension/<int:id>/string:version>', methods=['GET'])
-# Class Description: Download specified extension version package.
-def get_extension_download(id, version):
-    version_info = _query_qb(f'SELECT version FROM metadata WHERE id = {id}')
-    # TODO: Unpack version info to get download link; We'll need to figure out the version formatting first.
-    return None
+# Gets a single extension's metadata
+@app.route('/extension/<int:extension_id>', methods=['GET'])
+def get_single_extension(extension_id):
+    extension = Extension.query.filter_by(id=extension_id).first()
+    if not extension:
+        return jsonify({"error": "Extension not found"}), 404
+    return jsonify(extension.to_dict()), 200
 
+# Upload new extension w/new version - protected endpoint requires auth
 @app.route('/extension', methods=['PUT'])
-# Class Description: Uploads a new extension.
-def post_extension():
-    title = request.form['title']
-    creator = request.form['creator']
-    extends = request.form['extends']
-    summary = request.form['summary']
-    meta_license = request.form['meta_license']
-    project_license = request.form['project_license']
-    description = request.form['description']
-    tags = request.form['tags']
-    screenshots = request.form['screenshots']
-    releases = request.form['releases']
+@jwt_required()
+def add_extension():
+    try:
+        current_user_id = int(get_jwt_identity()) # get user_id for linking to extension
+        data = request.get_json()
 
-    _query_qb('INSERT INTO metadata (title, creator, extends, summary, meta_license, project_license, description, tags, screenshots, releases) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-              (title, creator, extends, summary, meta_license, project_license, description, tags, screenshots, releases))
+        new_extension = Extension(
+            title=data['title'],
+            meta_license=data['meta_license'],
+            project_license=data['project_license'],
+            creator=current_user_id,
+            extends=data['extends'],
+            summary=data['summary'],
+            description=data['description'],
+            tags=data.get('tags', []),
+            screenshots=data.get('screenshots', []), # takes url links
+            releases=data.get('releases', [])
+        )
+        db.session.add(new_extension)
+        db.session.flush()  # get new_extension.id before commit
 
-    # Doing a redirect here so the page is automatically refreshed with the new entry showing in the database view.
-    return redirect(url_for('index'))
+        new_version = Version(
+            extension_id=new_extension.id,
+            version=data.get('releases', [])[0],
+            plugin_url=data['plugin_url'], # takes url links
+        )
+        db.session.add(new_version)
+        new_extension.releases.append(new_version.version)
 
-@app.route('/extension/<int:id>', methods=['GET'])
-# Class Description: Returns a single extension's metadata.
-def get_extension(id, version):
-    extension_info = _query_qb(f'SELECT * FROM metadata WHERE id = {id}')
-    # We can reformat extension info that's returned here if needed
-    return extension_info
+        db.session.commit()
+        return jsonify({
+            "extension": new_extension.to_dict(),
+            "version": new_version.to_dict()
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
-@app.route('/extension/<int:id>', methods=['PUT'])
-# Class Description: Updates a single extension with a new version
-def put_extension(id):
-    data = request.json
-    _query_qb('UPDATE metadata SET title = ?, creator = ?, extends = ?, summary = ?, meta_license = ?, project_license = ?, description = ?, tags = ?, screenshots = ?, releases = ? WHERE id = ?',
-              (data['title'], data['creator'], data['extends'], data['summary'], data['meta_license'], data['project_license'], data['description'], data['tags'], data['screenshots'], data['releases'], id))
-    return jsonify({'success': True})
+# Update an new version to an existing extention - protected endpoint requires auth
+@app.route('/extension/<int:extension_id>', methods=['PUT'])
+@jwt_required()
+def put_extension(extension_id):
 
-@app.route('/extension/<int:id>', methods=['DELETE'])
-# Class Description: Deletes an extension version.
-def delete_extension(id):
-    _query_qb('DELETE FROM metadata WHERE id = ?', (id,))
-    return jsonify({'success': True})
+    # Verify that the user is adding a version to an extension they created
+    current_user_id = int(get_jwt_identity())
+    extension = Extension.query.filter_by(id=extension_id).first()
+    if not extension:
+        return jsonify({"error": "Extension not found"}), 404
+    if extension.creator != current_user_id:
+        return jsonify({'error': 'Unauthorized to update this extension'}), 403
 
-@app.route('/extension/<int:id>/flag', methods=['POST'])
-# Class Description: Flag an extension for review.
-def post_extension_flag(id):
-    # TODO: Figure out how flagging will be tracked... Boolean field, or a part of tags?
-    return None
+    try:
+        data = request.get_json()
+        new_version = Version(
+            extension_id=extension.id,
+            version=data['version'],
+            plugin_url=data['plugin_url'],
+        )
+        db.session.add(new_version)
+        db.session.flush()
 
-@app.route('/auth/register', methods=['POST'])
-# Class Description: Create registration for a new user.
-def post_user_registration():
-    # TODO: HOW ARE WE DOING AUTHENTICATION?
-    return None
+        extension.releases = extension.releases + [new_version.version]
+        db.session.commit()
+        return jsonify({
+            "extension": extension.to_dict(),
+            "version": new_version.to_dict()
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+# Download a specified extension version
+@app.route('/repository/extension/<int:extension_id>/<path:version>', methods=['GET'])
+def get_extension_download(extension_id, version):
+    target_version = Version.query.filter_by(extension_id=extension_id, version=version).first()
+    if not target_version:
+        return jsonify({"error": "Version not found"}), 404
+    return jsonify(target_version.to_dict()), 200
+
+# Download a specified extension version
+@app.route('/plugin/<int:extension_id>', methods=['GET'])
+def get_plugin(extension_id):
+    return get_single_extension(extension_id)
+
+# Flag an extension for review
+@app.route('/extension/<int:extension_id>/flag', methods=['POST'])
+def post_extension_flag(extension_id):
+    extension = Extension.query.filter_by(id=extension_id).first()
+    if not extension:
+        return jsonify({"error": "Extension not found, unable to flag"}), 404
+
+    extension.is_flagged = True
+
+    try:
+        db.session.commit()
+        return jsonify(extension.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+# Deletes an extension version - protected endpoint requires auth
+@app.route('/extension/<int:extension_id>/<int:version_id>', methods=['DELETE'])
+@jwt_required()
+def delete_extension(extension_id, version_id):
+    # Verify that the user is deleting an extension version that they created
+    app.logger.debug(f"jwt identity: {get_jwt_identity()}")
+    current_user_id = int(get_jwt_identity())
+    extension = Extension.query.filter_by(id=extension_id).first()
+    if extension.creator != current_user_id:
+        return jsonify({'error': 'Unauthorized to delete this extension'}), 403
+
+    version = Version.query.filter_by(id=version_id, extension_id=extension_id).first()
+    if not version:
+        return jsonify({'error': 'Version not found'}), 404
+
+    db.session.delete(version)
+    db.session.commit()
+    return jsonify({'success': True}), 200
+
+# Searches for a subset of extensions
+@app.route('/extension/searchExtensions/<string:query>/<string:tags>', methods=['GET'])
+def search_extensions(query, tags):
+    extensions = Extension.query.all()
+    results = []
+
+    # Convert query to lowercase 
+    # TODO: FK - handle spaces send as %20 or whatever
+    query = query.strip().lower()
+
+    # Fuzzy match extention titles
+    if query != '_':
+
+        title_to_exts = {}
+        for ext in extensions:
+            title_to_exts.setdefault(ext.title.lower(), []).append(ext)
+
+        titles = list(title_to_exts.keys())
+        matches = process.extract(query, titles, scorer=fuzz.WRatio, limit=20)
+
+        for match in matches:
+            title, score, _ = match
+            if score > 70:
+                results.extend(title_to_exts[title])
+
+    else:
+        results = extensions  # no query, include all
+
+
+    # Filter by tag
+    if tags != '_':
+        requested_tags = tags.split(",")
+        filtered_results = []
+        for ext in results:
+            lowercase_ext_tags = [tag.lower() for tag in ext.tags]
+            for tag in requested_tags:
+                if tag.lower() in lowercase_ext_tags:
+                    filtered_results.append(ext)
+                    break
+        results = filtered_results
+
+    return jsonify([ext.to_dict() for ext in results]), 200
 
 @app.route('/auth/login', methods=['POST'])
-# Class Description: Authenticate an existing user who's logging in.
-def post_user_authentication():
-    # TODO: HOW ARE WE DOING AUTHENTICATION?
-    return None
+def login():
+    data = request.form  # assuming form data
+    user = Users.query.filter_by(email=data['email']).first()
+    app.logger.debug(f"login user: {data['email']}")
+    users = Users.query.all()
+    app.logger.debug(f"emails: {[u.email for u in users]}")
+    if not user or not check_password_hash(user.password, data['password']):
+        return jsonify({'message': 'Invalid email or password'}), 400
 
-# This Function sounds like a duplicate of get_extension, but Class API Doc calls for it currently.
-@app.route('/plugin/<int:id>', methods=['GET'])
-# Class Description: Get a plugin and details about it.
-def get_plugin(id):
-    extension_info = _query_qb(f'SELECT * FROM metadata WHERE id = {id}')
-    # We can reformat extension info that's returned here if needed
-    return extension_info
+    # Create the JWT token with the user ID as a string
+    app.logger.debug(f"user id requesting access token: {user.id}")
+    access_token = create_access_token(identity=str(user.id), expires_delta=timedelta(hours=1))
+    app.logger.debug(f"access_token: {access_token}")
+    return jsonify(access_token=access_token, username=user.username), 200
 
+@app.route('/auth/register', methods=['POST'])
+def register():
+    data = request.form  # assuming form data
+
+    existing_user = Users.query.filter_by(email=data['email']).first()
+    if existing_user:
+        return jsonify({'message': 'Email already in use'}), 400
+
+    hashed_password = generate_password_hash(data['password'], method='pbkdf2:sha256')
+    new_user = Users(
+        username=data['username'],
+        email=data['email'],
+        password=hashed_password,
+    )
+
+    db.session.add(new_user)
+    db.session.commit()
+
+    # Create the JWT token with the new user's ID as a string
+    app.logger.debug(f"user id requesting access token: {users.id}")
+    access_token = create_access_token(identity=str(new_user.id), expires_delta=timedelta(hours=1))
+    return jsonify(access_token=access_token, username=new_user.username), 201
+
+# TODO: implement
 # IMO terrible name from the class API Doc, should probably come up with a better name
 @app.route('/extension/sanitizeExtension', methods=['PUT'])
 # Class Description: Process ran as a part of extension uploading to check against metadata guidelines.
@@ -138,13 +262,6 @@ def put_sanitize_extension(id):
     # TODO: Figure out what needs to be done here.
     return None
 
-@app.route('/extension/searchExtensions/string:query>/string:tags>', methods=['GET'])
-# Class Description: Searches for a subset of extensions.
-def get_extension_search(query, tags):
-    # TODO: Figure out how to search the database for a generalized query and/or tags.
-    return None
-
 # This function can be used in an IDE to run the app locally instead of using run_app.bat
 if __name__ == '__main__':
-    _create_db()
     app.run(debug=True)
