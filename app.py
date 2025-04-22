@@ -34,7 +34,7 @@ app = create_app()
 
 @app.route('/', methods=['GET'])
 def index():
-    return render_template('index.html')
+    return render_template('ext_upload.html')
 
 # Get metadata for all extensions
 @app.route('/repository/metadata', methods=['GET'])

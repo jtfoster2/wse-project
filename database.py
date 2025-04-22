@@ -14,8 +14,8 @@ from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, ARRAY
 
 # Set up actual database
 db = SQLAlchemy()
-db_connection_string = "fatimakahbi@localhost:5432/database" # TODO: update this to use the actual database nane
-
+# db_connection_string = "fatimakahbi@localhost:5432/database" # TODO: update this to use the actual database nane
+db_connection_string= "postgres:Moisesv@localhost:5432/database"
 
 class Users(db.Model):
     __tablename__ = 'users'

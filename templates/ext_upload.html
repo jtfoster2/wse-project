@@ -19,7 +19,7 @@
                 <button class="btn btn-secondary w-100">Search</button>
             </div>
             <div class="col-md-10">
-                <form action="/extension" method="PUT" enctype="multipart/form-data">
+                <form id="extensionForm" enctype="multipart/form-data">
                     <div class="card p-3">
                         <div class="card-body">
                             <h5 class="card-title text-center">Extension Details</h5>
@@ -78,6 +78,42 @@
             </div>
         </div>
     </div>
+
+<script>
+    document.getElementById('extensionForm').addEventListener('submit',function(event){
+        event.preventDefault();
+
+        const form = document.getElementById('extensionForm');
+        const formData = new FormData(form);
+
+        fetch('/extension', {
+            method: 'PUT',
+            body: formData
+        })
+            .then(response => {
+                if(response.redirected) {
+                    window.location.href = response.url;
+                } else if(response.headers.get("content-type")?.includes("application/json")){
+                    return response.json();
+                }
+                else{
+                    return response.text();
+                }
+            })
+            .then(data => {
+                if(data) {
+                    alert('Extension upload successful!');
+                    console.log(data);
+                }
+            })
+            .catch(error => {
+                console.error('Error: ',error);
+                alert('Upload unsuccessful');
+            });
+    });
+</script>
+
+
 </body>
 
 </html>
