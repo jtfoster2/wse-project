@@ -39,4 +39,70 @@
       </div>
   </div>
   </body>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const table = document.getElementById('extensionsTable');
+  
+      fetch('/repository/metadata')
+        .then(response => response.json())
+        .then(data => {
+          data.forEach(extension => {
+            const row = document.createElement('tr');
+  
+            // Name of Extension
+            const nameCell = document.createElement('td');
+            nameCell.textContent = extension.title;
+            row.appendChild(nameCell);
+  
+            // Flagged Status
+            const flaggedCell = document.createElement('td');
+            flaggedCell.textContent = extension.is_flagged ? 'Yes' : 'No';
+            row.appendChild(flaggedCell);
+  
+            // Delete Button
+            const deleteCell = document.createElement('td');
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.className = 'btn btn-danger btn-sm';
+  
+            // Delete
+            deleteBtn.addEventListener('click', () => {
+              const token = localStorage.getItem('access_token');
+              if (!token) return alert('User not authenticated');
+  
+              // Get latest version ID of extension
+              fetch(`/extension/${extension.id}`)
+                .then(res => res.json())
+                .then(detail => {
+                  const versionId = detail.versions && detail.versions.length > 0 ? detail.versions[detail.versions.length - 1].id : null;
+                  if (!versionId) return alert('No version to be deleted.');
+  
+                  fetch(`/extension/${extension.id}/${versionId}`, {
+                    method: 'DELETE',
+                    headers: {
+                      'Authorization': 'Bearer ' + token
+                    }
+                  })
+                  .then(res => {
+                    if (res.ok) {
+                      row.remove(); // Remove row from table
+                    } else {
+                      res.json().then(d => alert(d.error || 'Delete failed'));
+                    }
+                  });
+                });
+            });
+  
+            deleteCell.appendChild(deleteBtn);
+            row.appendChild(deleteCell);
+  
+            table.appendChild(row);
+          });
+        })
+        .catch(error => {
+          console.error('Error loading extensions:', error);
+        });
+    });
+  </script>
+  
 </html>

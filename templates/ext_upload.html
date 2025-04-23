@@ -78,6 +78,39 @@
             </div>
         </div>
     </div>
+    <script>
+        document.getElementById('extensionForm').addEventListener('submit',function(event){
+            event.preventDefault();
+    
+            const form = document.getElementById('extensionForm');
+            const formData = new FormData(form);
+    
+            fetch('/extension', {
+                method: 'PUT',
+                body: formData
+            })
+                .then(response => {
+                    if(response.redirected) {
+                        window.location.href = response.url;
+                    } else if(response.headers.get("content-type")?.includes("application/json")){
+                        return response.json();
+                    }
+                    else{
+                        return response.text();
+                    }
+                })
+                .then(data => {
+                    if(data) {
+                        alert('Extension upload successful!');
+                        console.log(data);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error: ',error);
+                    alert('Upload unsuccessful');
+                });
+        });
+    </script>
 </body>
 
 </html>
