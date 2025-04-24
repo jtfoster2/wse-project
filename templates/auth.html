@@ -10,7 +10,7 @@
   <div class="container d-flex justify-content-center align-items-center" style="height: 100vh;">
     <div class="card p-4 shadow" style="min-width: 300px; max-width: 400px;">
       <h4 class="text-center mb-3">Login</h4>
-      <form action="/login" method="POST">
+      <form id="loginForm">
         <div class="mb-3">
           <label class="form-label">Email</label>
           <input type="email" class="form-control" name="email" required>
@@ -21,14 +21,13 @@
         </div>
         <button type="submit" class="btn btn-primary w-100">Login</button>
       </form>
+
       <hr />
-      <form action="/register" method="POST">
+
+      <form id="registerForm">
         <h6 class="text-center">or Register</h6>
         <div class="mb-2">
-          <input type="text" class="form-control" name="first_name" placeholder="First Name" required>
-        </div>
-        <div class="mb-2">
-          <input type="text" class="form-control" name="last_name" placeholder="Last Name" required>
+          <input type="text" class="form-control" name="username" placeholder="Username" required>
         </div>
         <div class="mb-2">
           <input type="email" class="form-control" name="email" placeholder="Email" required>
@@ -40,5 +39,51 @@
       </form>
     </div>
   </div>
+
+  <script>
+    // Login Form Handler
+    document.getElementById("loginForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const formData = new FormData(e.target);
+
+      const response = await fetch('/auth/login', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert(`Welcome, ${data.username}`);
+        localStorage.setItem("access_token", data.access_token);
+        window.location.href = "/ext_upload";  // Redirect to dashboard or upload page
+      } else {
+        alert(data.message || "Login failed.");
+      }
+    });
+
+    // Register Form Handler
+    document.getElementById("registerForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const formData = new FormData(e.target);
+
+      const response = await fetch('/auth/register', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert("Registered successfully. You are now logged in.");
+        localStorage.setItem("access_token", data.access_token);
+        window.location.href = "/ext_upload";  // Redirect after registration
+      } else {
+        alert(data.message || "Registration failed.");
+      }
+    });
+  </script>
 </body>
 </html>
