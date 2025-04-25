@@ -1,3 +1,4 @@
+import os
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, ARRAY
 
@@ -14,7 +15,10 @@ from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, ARRAY
 
 # Set up actual database
 db = SQLAlchemy()
-db_connection_string = "fatimakahbi@localhost:5432/database" # TODO: update this to use the actual database nane
+
+# Use environment variable for DB connection string if provided
+# db connection string format should be <username>:<password>@<localhost>/<database_name>
+db_connection_string = os.getenv("DB_CONNECTION_STRING", "postgres:admin@localhost:5432/postgres") # TODO: update this to use the actual database nane
 
 
 class Users(db.Model):
