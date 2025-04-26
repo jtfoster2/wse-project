@@ -41,45 +41,33 @@
   </div>
 
   <script>
-    // Login Form Handler
     document.getElementById("loginForm").addEventListener("submit", async function(e) {
       e.preventDefault();
-
       const formData = new FormData(e.target);
 
-      const response = await fetch('/auth/login', {
-        method: 'POST',
-        body: formData
-      });
-
+      const response = await fetch('/auth/login', { method: 'POST', body: formData });
       const data = await response.json();
 
       if (response.ok) {
         alert(`Welcome, ${data.username}`);
         localStorage.setItem("access_token", data.access_token);
-        window.location.href = "/ext_upload";  // Redirect to dashboard or upload page
+        window.location.href = "/user";  // Redirect to main page after login
       } else {
         alert(data.message || "Login failed.");
       }
     });
 
-    // Register Form Handler
     document.getElementById("registerForm").addEventListener("submit", async function(e) {
       e.preventDefault();
-
       const formData = new FormData(e.target);
 
-      const response = await fetch('/auth/register', {
-        method: 'POST',
-        body: formData
-      });
-
+      const response = await fetch('/auth/register', { method: 'POST', body: formData });
       const data = await response.json();
 
       if (response.ok) {
         alert("Registered successfully. You are now logged in.");
         localStorage.setItem("access_token", data.access_token);
-        window.location.href = "/ext_upload";  // Redirect after registration
+        window.location.href = "/user";  // Redirect after registration
       } else {
         alert(data.message || "Registration failed.");
       }

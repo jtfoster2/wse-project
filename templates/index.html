@@ -1,206 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Interaction</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        .endpoint {
-            margin-bottom: 20px;
-        }
-        .endpoint button {
-            padding: 10px 20px;
-            margin: 5px;
-        }
-        .endpoint form input {
-            margin: 5px 0;
-        }
-        #metadataCount, #usersCount, #dependenciesCount {
-            font-weight: bold;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Extension Search</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <h1>API Interaction</h1>
-
-    <!-- GET Endpoints -->
-    <div class="endpoint">
-        <h2>GET /repository/metadata</h2>
-        <button onclick="getMetadata()">Get Metadata</button>
-        <p>Current Metadata Count: <span id="metadataCount">0</span></p>
+  <div class="container-fluid p-4">
+    <!-- Navbar -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <a href="/index" class="btn btn-outline-primary me-2">Search Extensions</a>
+        <a href="/ext_upload" class="btn btn-outline-success me-2">Upload Extension</a>
+        <a href="/reviewer" class="btn btn-outline-warning me-2">Reviewer Dashboard</a>
+      </div>
+      <button onclick="logout()" class="btn btn-outline-danger">Logout</button>
     </div>
 
-    <div class="endpoint">
-        <h2>GET /repository/extension/{id}/{version}</h2>
-        <input type="text" id="extensionId" placeholder="Extension ID">
-        <input type="text" id="extensionVersion" placeholder="Version">
-        <button onclick="getExtension()">Get Extension</button>
+    <!-- Search -->
+    <div class="mb-4 d-flex">
+      <input id="searchInput" type="text" class="form-control me-2" placeholder="Search extensions...">
+      <button class="btn btn-primary" onclick="searchExtensions()">Search</button>
     </div>
 
-    <div class="endpoint">
-        <h2>GET /plugin/{id}</h2>
-        <input type="text" id="pluginId" placeholder="Plugin ID">
-        <button onclick="getPlugin()">Get Plugin</button>
-    </div>
+    <!-- Results -->
+    <div id="searchResults"></div>
+  </div>
 
-    <!-- POST Endpoints -->
-    <div class="endpoint">
-        <h2>POST /extension/{id}/flag</h2>
-        <input type="text" id="flagExtensionId" placeholder="Extension ID">
-        <button onclick="flagExtension()">Flag Extension</button>
-    </div>
+  <script>
+    function logout() {
+      localStorage.removeItem("access_token");
+      window.location.href = "/";
+    }
 
-    <div class="endpoint">
-        <h2>POST /auth/register</h2>
-        <form onsubmit="registerUser(event)">
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="password" id="password" placeholder="Password" required>
-            <button type="submit">Register</button>
-        </form>
-    </div>
+    async function searchExtensions() {
+      const query = document.getElementById('searchInput').value || '_';
+      const tags = '_';
 
-    <div class="endpoint">
-        <h2>POST /auth/login</h2>
-        <form onsubmit="loginUser(event)">
-            <input type="text" id="loginUsername" placeholder="Username" required>
-            <input type="password" id="loginPassword" placeholder="Password" required>
-            <button type="submit">Login</button>
-        </form>
-    </div>
+      const response = await fetch(`/extension/searchExtensions/${encodeURIComponent(query)}/${tags}`);
+      const extensions = await response.json();
 
-    <!-- PUT Endpoints -->
-    <div class="endpoint">
-        <h2>PUT /extension/{id}</h2>
-        <input type="text" id="putExtensionId" placeholder="Extension ID">
-        <textarea id="putExtensionData" placeholder="JSON data to update the extension"></textarea>
-        <button onclick="putExtension()">Update Extension</button>
-    </div>
+      const container = document.getElementById('searchResults');
+      container.innerHTML = '';
 
-    <!-- DELETE Endpoints -->
-    <div class="endpoint">
-        <h2>DELETE /extension/{id}</h2>
-        <input type="text" id="deleteExtensionId" placeholder="Extension ID">
-        <button onclick="deleteExtension()">Delete Extension</button>
-    </div>
+      if (extensions.length === 0) {
+        container.innerHTML = '<p>No extensions found.</p>';
+        return;
+      }
 
-    <script>
-        // Fetch Metadata and update count
-        async function getMetadata() {
-            try {
-                const response = await fetch('/repository/metadata');
-                const data = await response.json();
-                document.getElementById('metadataCount').innerText = data.length;
-                alert(JSON.stringify(data));
-            } catch (error) {
-                alert('Error fetching metadata: ' + error);
-            }
-        }
+      extensions.forEach(ext => {
+        const card = document.createElement('div');
+        card.className = 'card mb-3';
+        card.innerHTML = `
+          <div class="card-header"><strong>${ext.title}</strong></div>
+          <div class="card-body">
+            <p><strong>Summary:</strong> ${ext.summary}</p>
+            <p><strong>Description:</strong> ${ext.description}</p>
+            <p><strong>Version(s):</strong> ${ext.releases.join(', ')}</p>
+            <div class="text-end">
+              <button class="btn btn-info me-2" onclick="downloadExtension(${ext.id}, '${ext.releases[0]}')">Download</button>
+              <button class="btn btn-warning me-2" onclick="flagExtension(${ext.id})">Flag</button>
+              <button class="btn btn-success" onclick="updateExtension(${ext.id})">Update</button>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
 
-        // Fetch a specific extension
-        async function getExtension() {
-            const id = document.getElementById('extensionId').value;
-            const version = document.getElementById('extensionVersion').value;
-            try {
-                const response = await fetch(`/repository/extension/${id}/${version}`);
-                const data = await response.json();
-                alert(JSON.stringify(data));
-            } catch (error) {
-                alert('Error fetching extension: ' + error);
-            }
-        }
+    function downloadExtension(id, version) {
+      window.location.href = `/repository/extension/${id}/${version}`;
+    }
 
-        // Fetch a specific plugin
-        async function getPlugin() {
-            const id = document.getElementById('pluginId').value;
-            try {
-                const response = await fetch(`/plugin/${id}`);
-                const data = await response.json();
-                alert(JSON.stringify(data));
-            } catch (error) {
-                alert('Error fetching plugin: ' + error);
-            }
-        }
+    async function flagExtension(id) {
+      const res = await fetch(`/extension/${id}/flag`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
 
-        // Flag an extension
-        async function flagExtension() {
-            const id = document.getElementById('flagExtensionId').value;
-            try {
-                const response = await fetch(`/extension/${id}/flag`, { method: 'POST' });
-                const data = await response.json();
-                alert(JSON.stringify(data));
-            } catch (error) {
-                alert('Error flagging extension: ' + error);
-            }
-        }
+      if (res.ok) {
+        alert("Extension flagged for review.");
+      } else {
+        alert("Failed to flag the extension.");
+      }
+    }
 
-        // Register a user
-        async function registerUser(event) {
-            event.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            try {
-                const response = await fetch('/auth/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                const data = await response.json();
-                alert(JSON.stringify(data));
-            } catch (error) {
-                alert('Error registering user: ' + error);
-            }
-        }
+    function updateExtension(id) {
+      window.location.href = `/ext_update.html?id=${id}`;
+    }
+  </script>
 
-        // Login a user
-        async function loginUser(event) {
-            event.preventDefault();
-            const username = document.getElementById('loginUsername').value;
-            const password = document.getElementById('loginPassword').value;
-            try {
-                const response = await fetch('/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                const data = await response.json();
-                alert(JSON.stringify(data));
-            } catch (error) {
-                alert('Error logging in: ' + error);
-            }
-        }
-
-        // Update Extension
-        async function putExtension() {
-            const id = document.getElementById('putExtensionId').value;
-            const data = JSON.parse(document.getElementById('putExtensionData').value);
-            try {
-                const response = await fetch(`/extension/${id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                const result = await response.json();
-                alert(JSON.stringify(result));
-            } catch (error) {
-                alert('Error updating extension: ' + error);
-            }
-        }
-
-        // Delete Extension
-        async function deleteExtension() {
-            const id = document.getElementById('deleteExtensionId').value;
-            try {
-                const response = await fetch(`/extension/${id}`, { method: 'DELETE' });
-                const result = await response.json();
-                alert(JSON.stringify(result));
-            } catch (error) {
-                alert('Error deleting extension: ' + error);
-            }
-        }
-    </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

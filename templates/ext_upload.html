@@ -1,116 +1,135 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <title>Extensions Upload</title>
-
-     <!-- Bootstrap CSS -->
-     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-  </head>
-
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Extension</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
 <body>
-    <div class="container-fluid p-3">
-        <div class="d-flex justify-content-between">
-            <a href="ext_status.html" class="btn btn-outline-secondary" id="uploads">Uploads</a>
-            <button class="btn btn-outline-danger">Logout</button>
-        </div>
-        <div class="row mt-3">
-            <div class="col-md-2 bg-light p-3">
-                <button class="btn btn-secondary w-100">Search</button>
-            </div>
-            <div class="col-md-10">
-                <form action="/extension" method="PUT" enctype="multipart/form-data">
-                    <div class="card p-3">
-                        <div class="card-body">
-                            <h5 class="card-title text-center">Extension Details</h5>
-                            <div class="mb-3">
-                              <label for="title" class="form-label">Title</label>
-                              <input type="text" class="form-control" id="title" name="title" required>
-                          </div>
-                          <div class="mb-3">
-                              <label for="creator" class="form-label">Creator</label>
-                              <input type="text" class="form-control" id="creator" name="creator" required>
-                          </div>
-                          <div class="mb-3">
-                              <label for="extends" class="form-label">Extends</label>
-                              <input type="text" class="form-control" id="extends" name="extends" required>
-                          </div>
-                          <div class="mb-3">
-                              <label for="summary" class="form-label">Summary</label>
-                              <input type="text" class="form-control" id="summary" name="summary" required>
-                          </div>
-                          <div class="mb-3">
-                              <label for="meta_license" class="form-label">Meta License</label>
-                              <input type="text" class="form-control" id="meta_license" name="meta_license" required>
-                          </div>
-                          <div class="mb-3">
-                              <label for="project_license" class="form-label">Project License</label>
-                              <input type="text" class="form-control" id="project_license" name="project_license" required>
-                          </div>
-                          <div class="mb-3">
-                              <label for="description" class="form-label">Description</label>
-                              <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
-                          </div>
-                          <div class="mb-3">
-                              <label for="tags" class="form-label">Tags(comma-separated)</label>
-                              <input type="text" class="form-control" id="tags" name="tags">
-                          </div>
-                          <div class="mb-3">
-                              <label for="screenshots" class="form-label">Screenshots(comma-separated URLs)</label>
-                              <input type="text" class="form-control" id="screenshots" name="screenshots">
-                          </div>
-                          <div class="mb-3">
-                              <label for="releases" class="form-label">Releases(comma-separated version info)</label>
-                              <input type="text" class="form-control" id="releases" name="releases">
-                          </div>
-                        </div>
-                    </div>
-                    <div class="card p-3 mt-3">
-                        <div class="card-body text-center">
-                            <label for="fileUpload" class="form-label">.gex file upload</label>
-                            <input type="file" class="form-control" id="fileUpload" name="file" required>
-                        </div>
-                    </div>
-                    <div class="mt-3 text-end">
-                        <button type="submit" class="btn btn-primary">Submit</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+  <div class="container-fluid p-4">
+    <!-- Navbar -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <a href="/index" class="btn btn-outline-primary me-2">Search Extensions</a>
+        <a href="/ext_upload" class="btn btn-outline-success me-2">Upload Extension</a>
+        <a href="/reviewer" class="btn btn-outline-warning me-2">Reviewer Dashboard</a>
+      </div>
+      <button onclick="logout()" class="btn btn-outline-danger">Logout</button>
     </div>
-    <script>
-        document.getElementById('extensionForm').addEventListener('submit',function(event){
-            event.preventDefault();
-    
-            const form = document.getElementById('extensionForm');
-            const formData = new FormData(form);
-    
-            fetch('/extension', {
-                method: 'PUT',
-                body: formData
-            })
-                .then(response => {
-                    if(response.redirected) {
-                        window.location.href = response.url;
-                    } else if(response.headers.get("content-type")?.includes("application/json")){
-                        return response.json();
-                    }
-                    else{
-                        return response.text();
-                    }
-                })
-                .then(data => {
-                    if(data) {
-                        alert('Extension upload successful!');
-                        console.log(data);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error: ',error);
-                    alert('Upload unsuccessful');
-                });
-        });
-    </script>
-</body>
 
+    <!-- Upload Form -->
+    <div class="card">
+      <div class="card-header text-center">
+        <h4>Upload New Extension</h4>
+      </div>
+      <div class="card-body">
+        <form id="uploadForm">
+          <div class="mb-3">
+            <label class="form-label">Title</label>
+            <input type="text" class="form-control" name="title" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Extends</label>
+            <input type="text" class="form-control" name="extends" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Summary</label>
+            <input type="text" class="form-control" name="summary" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Meta License</label>
+            <input type="text" class="form-control" name="meta_license" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Project License</label>
+            <input type="text" class="form-control" name="project_license" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea class="form-control" name="description" required></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Tags (comma separated)</label>
+            <input type="text" class="form-control" name="tags">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Screenshots (comma separated URLs)</label>
+            <input type="text" class="form-control" name="screenshots">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Releases (comma separated)</label>
+            <input type="text" class="form-control" name="releases">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Plugin URL</label>
+            <input type="text" class="form-control" name="plugin_url" required>
+          </div>
+
+          <div class="text-end">
+            <button type="submit" class="btn btn-primary">Upload Extension</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function logout() {
+      localStorage.removeItem("access_token");
+      window.location.href = "/";
+    }
+
+    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const formData = new FormData(this);
+      const data = {
+        title: formData.get('title'),
+        extends: formData.get('extends'),
+        summary: formData.get('summary'),
+        meta_license: formData.get('meta_license'),
+        project_license: formData.get('project_license'),
+        description: formData.get('description'),
+        tags: formData.get('tags') ? formData.get('tags').split(',').map(tag => tag.trim()) : [],
+        screenshots: formData.get('screenshots') ? formData.get('screenshots').split(',').map(url => url.trim()) : [],
+        releases: formData.get('releases') ? formData.get('releases').split(',').map(release => release.trim()) : [],
+        plugin_url: formData.get('plugin_url')
+      };
+
+      try {
+        const token = localStorage.getItem('access_token');
+        const response = await fetch('/extension', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+          alert('Extension uploaded successfully!');
+          this.reset();
+        } else {
+          const error = await response.json();
+          alert('Upload failed: ' + (error.error || 'Unknown error'));
+        }
+      } catch (error) {
+        alert('Error uploading extension: ' + error.message);
+      }
+    });
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
 </html>
