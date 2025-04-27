@@ -34,7 +34,7 @@ app = create_app()
 
 @app.route('/', methods=['GET'])
 def index():
-    return render_template('index.html')
+    return render_template('auth.html')
 
 # Get metadata for all extensions
 @app.route('/repository/metadata', methods=['GET'])
@@ -263,5 +263,31 @@ def put_sanitize_extension(id):
     return None
 
 # This function can be used in an IDE to run the app locally instead of using run_app.bat
+# Render HTML Pages from /templates
+
+@app.route('/auth', methods=['GET'])
+def auth_page():
+    return render_template('auth.html')
+
+@app.route('/ext_upload', methods=['GET'])
+def ext_upload_page():
+    return render_template('ext_upload.html')
+
+@app.route('/ext_status', methods=['GET'])
+def ext_status_page():
+    return render_template('ext_status.html')
+
+@app.route('/ext_update', methods=['GET'])
+def ext_update_page():
+    return render_template('ext_update.html')
+
+@app.route('/reviewer', methods=['GET'])
+def reviewer_page():
+    return render_template('reviewer.html')
+
+@app.route('/user', methods=['GET'])
+def user_page():
+    return render_template('user.html')
+
 if __name__ == '__main__':
     app.run(debug=True)

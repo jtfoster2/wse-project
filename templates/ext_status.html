@@ -1,42 +1,133 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <title>Extensions Status</title>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Extensions Status</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
 
-     <!-- Bootstrap CSS -->
-     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-  </head>
+<body>
+  <div class="container-fluid p-4">
+    <!-- Navbar -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <a href="/user" class="btn btn-outline-primary me-2">Search Extensions</a>
+        <a href="/ext_upload" class="btn btn-outline-success me-2">Upload Extension</a>
+        <a href="/reviewer" class="btn btn-outline-warning me-2">Reviewer Dashboard</a>
+      </div>
+      <button onclick="logout()" class="btn btn-outline-danger">Logout</button>
+    </div>
 
-  <body>
-    <div class="container-fluid p-3">
-      <div class="d-flex justify-content-between">
-          <a href="ext_status.html" class="btn btn-outline-secondary" id="uploads">Uploads</a>
-          <button class="btn btn-outline-danger" id="logout">Logout</button>
+    <!-- Status Table -->
+    <div class="card">
+      <div class="card-header text-center">
+        <h4>Uploaded Extensions Status</h4>
       </div>
-      <div class="row mt-3">
-          <div class="col-md-2 bg-light p-3">
-              <button class="btn btn-secondary w-100">Search</button>
-          </div>
-          <div class="col-md-10">
-              <div class="card p-3">
-                  <div class="card-body">
-                      <h5 class="card-title text-center">Extension Created</h5>
-                      <div class="table-responsive">
-                        <table class="table table-stripped table-bordered" id="extensionsTable">
-                          <thead>
-                            <tr>
-                              <th>Extension Name</th>
-                              <th>Flagged</th>
-                              <th>Delete</th>
-                            </tr>
-                          </thead>
-                        </table>
-                      </div>
-                  </div>
-              </div>
-          </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped table-bordered" id="extensionsTable">
+            <thead>
+              <tr>
+                <th>Extension Name</th>
+                <th>Flagged</th>
+                <th>Delete Latest Version</th>
+              </tr>
+            </thead>
+            <tbody id="extensionsBody">
+              <!-- Data will be populated by JavaScript -->
+            </tbody>
+          </table>
+        </div>
       </div>
+    </div>
   </div>
-  </body>
+
+  <script>
+    function logout() {
+      localStorage.removeItem('access_token');
+      window.location.href = "/";
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const tableBody = document.getElementById('extensionsBody');
+
+      fetch('/repository/metadata')
+        .then(response => response.json())
+        .then(extensions => {
+          extensions.forEach(extension => {
+            const row = document.createElement('tr');
+
+            // Extension Name
+            const nameCell = document.createElement('td');
+            nameCell.textContent = extension.title;
+            row.appendChild(nameCell);
+
+            // Flagged Status
+            const flaggedCell = document.createElement('td');
+            flaggedCell.textContent = extension.is_flagged ? 'Yes' : 'No';
+            row.appendChild(flaggedCell);
+
+            // Delete Button
+            const deleteCell = document.createElement('td');
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = 'Delete';
+            deleteButton.className = 'btn btn-danger btn-sm';
+
+            deleteButton.addEventListener('click', async () => {
+              const token = localStorage.getItem('access_token');
+              if (!token) {
+                alert('User not authenticated.');
+                return;
+              }
+
+              // Fetch extension details
+              const detailResponse = await fetch(`/extension/${extension.id}`);
+              const detail = await detailResponse.json();
+
+              // Assume releases list exists
+              if (!detail.releases || detail.releases.length === 0) {
+                alert('No version available to delete.');
+                return;
+              }
+
+              const latestVersionName = detail.releases[detail.releases.length - 1];
+
+              // Get version object using latest version name
+              const versionsResponse = await fetch(`/repository/extension/${extension.id}/${latestVersionName}`);
+              const versionDetail = await versionsResponse.json();
+              const versionId = versionDetail.id;
+
+              // Delete version
+              const deleteResponse = await fetch(`/extension/${extension.id}/${versionId}`, {
+                method: 'DELETE',
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+
+              if (deleteResponse.ok) {
+                alert('Latest version deleted successfully.');
+                row.remove();
+              } else {
+                const errorData = await deleteResponse.json();
+                alert(errorData.error || 'Failed to delete version.');
+              }
+            });
+
+            deleteCell.appendChild(deleteButton);
+            row.appendChild(deleteCell);
+
+            tableBody.appendChild(row);
+          });
+        })
+        .catch(error => {
+          console.error('Error loading extensions:', error);
+          alert('Failed to load extensions.');
+        });
+    });
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
 </html>

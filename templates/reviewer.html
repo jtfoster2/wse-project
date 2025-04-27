@@ -1,57 +1,81 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reviewer Dashboard</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
   <div class="container-fluid p-4">
+    <!-- Navbar -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2>Reviewer Dashboard</h2>
-      <a href="/" class="btn btn-outline-danger">Logout</a>
-    </div>
-
-    <!-- Search -->
-    <div class="mb-4">
-      <input type="text" class="form-control" placeholder="Search extensions...">
-    </div>
-
-    <!-- Extension Comments / Flagged -->
-    <div class="card mb-4">
-      <div class="card-header">Extension Name</div>
-      <div class="card-body">
-        <textarea class="form-control mb-3" rows="3" placeholder="Extension Details / Reason Flagged"></textarea>
-        <div class="text-end">
-          <button class="btn btn-success me-2">Accept</button>
-          <button class="btn btn-danger">Refuse</button>
-        </div>
+      <div>
+        <a href="/user" class="btn btn-outline-primary me-2">Search Extensions</a>
+        <a href="/ext_upload" class="btn btn-outline-success me-2">Upload Extension</a>
+        <a href="/reviewer" class="btn btn-outline-warning me-2">Reviewer Dashboard</a>
       </div>
+      <button onclick="logout()" class="btn btn-outline-danger">Logout</button>
     </div>
 
-    <!-- Reviewer's Comments -->
-    <div class="card mb-4">
-      <div class="card-header">Extension Name</div>
-      <div class="card-body">
-        <textarea class="form-control mb-3" rows="3" placeholder="Reviewer's Comments / Reasoning"></textarea>
-        <div class="text-end">
-          <button class="btn btn-primary">Send</button>
-        </div>
-      </div>
-    </div>
+    <h2 class="text-center mb-4">Flagged Extensions for Review</h2>
 
-    <!-- Reason for flag or review -->
-    <div class="card">
-      <div class="card-header">Extension Name</div>
-      <div class="card-body">
-        <textarea class="form-control mb-3" rows="3" placeholder="Reason for flag or review"></textarea>
-        <div class="text-end">
-          <button class="btn btn-primary">Send</button>
-        </div>
-      </div>
-    </div>
+    <!-- Flagged Extensions List -->
+    <div id="flaggedExtensions"></div>
   </div>
+
+  <script>
+    function logout() {
+      localStorage.removeItem("access_token");
+      window.location.href = "/";
+    }
+
+    async function loadFlaggedExtensions() {
+      try {
+        const response = await fetch('/repository/metadata');
+        const extensions = await response.json();
+        const container = document.getElementById('flaggedExtensions');
+        container.innerHTML = '';
+
+        const flagged = extensions.filter(ext => ext.is_flagged);
+
+        if (flagged.length === 0) {
+          container.innerHTML = "<p>No flagged extensions found.</p>";
+          return;
+        }
+
+        flagged.forEach(ext => {
+          const card = document.createElement('div');
+          card.className = "card mb-3";
+          card.innerHTML = `
+            <div class="card-body">
+              <h5 class="card-title">${ext.title}</h5>
+              <p class="card-text">${ext.description || 'No description available.'}</p>
+              <div class="text-end">
+                <button class="btn btn-success me-2" onclick="acceptExtension(${ext.id})">Accept</button>
+                <button class="btn btn-danger" onclick="refuseExtension(${ext.id})">Reject</button>
+              </div>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+
+      } catch (error) {
+        console.error("Error loading flagged extensions:", error);
+        alert("Error loading flagged extensions.");
+      }
+    }
+
+    async function acceptExtension(id) {
+      alert(`Extension ID ${id} accepted. (You can add backend endpoint later if needed.)`);
+    }
+
+    async function refuseExtension(id) {
+      alert(`Extension ID ${id} rejected. (You can add backend endpoint later if needed.)`);
+    }
+
+    window.onload = loadFlaggedExtensions;
+  </script>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
