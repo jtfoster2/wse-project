@@ -16,7 +16,11 @@ from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, ARRAY
 db = SQLAlchemy()
 # db_connection_string = "fatimakahbi@localhost:5432/database" # TODO: update this to use the actual database nane
 # db_connection_string= "postgres:Moisesv@localhost:5432/database"
-db_connection_string = "postgres:Saleem1218Mirzai!@localhost:5432/extmanager"
+# db_connection_string = "postgres:Saleem1218Mirzai!@localhost:5432/extmanager"
+
+# Use environment variable for DB connection string if provided
+# db connection string format should be <username>:<password>@<localhost>/<database_name>
+db_connection_string = os.getenv("DB_CONNECTION_STRING", "postgres:admin@localhost:5432/postgres") # TODO: update this to use the actual database nane
 
 class Users(db.Model):
     __tablename__ = 'users'
